@@ -26,7 +26,7 @@ target = tf.placeholder(tf.float32)
 
 #le network
 l1 = tf.layers.dense(state, 100, tf.nn.relu)
-l2 = tf.layers.dense(l1, 500, tf.nn.relu)
+l2 = tf.layers.dense(l1, 50, tf.nn.relu)
 NN = tf.layers.dense(l2, 1)
 
 #fonction a minimiser
