@@ -10,7 +10,7 @@ gamma = 0.99
 #lambda utilise dans le calcul du lambda return
 l = 0.8
 G = (h+1)*[0]
-learning_rate = 1e-04
+learning_rate = 1e-05
 
 #policy a evaluer : on acelere dans le sens de la vitesse du vehicule
 def policy(obs):
@@ -25,8 +25,8 @@ state = tf.placeholder(shape = [None,2], dtype = tf.float32)
 target = tf.placeholder(tf.float32)
 
 #le network
-l1 = tf.layers.dense(state, 10, tf.nn.relu)
-l2 = tf.layers.dense(l1, 100, tf.nn.relu)
+l1 = tf.layers.dense(state, 100, tf.nn.relu)
+l2 = tf.layers.dense(l1, 500, tf.nn.relu)
 NN = tf.layers.dense(l2, 1)
 
 #fonction a minimiser
