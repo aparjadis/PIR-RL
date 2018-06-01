@@ -3,6 +3,8 @@ import tensorflow as tf
 import numpy as np
 env = gym.make("MountainCar-v0")
 
+#Probleme sur la valeur du V(final-state)
+
 Nb_episodes = 10000
 #horizon
 h = 10
@@ -25,9 +27,10 @@ state = tf.placeholder(shape = [None,2], dtype = tf.float32)
 target = tf.placeholder(tf.float32)
 
 #le network
-l1 = tf.layers.dense(state, 100, tf.nn.relu)
-l2 = tf.layers.dense(l1, 50, tf.nn.relu)
-NN = tf.layers.dense(l2, 1)
+l1 = tf.layers.dense(state, 10, tf.nn.relu)
+l2 = tf.layers.dense(l1, 500, tf.nn.relu)
+l3 = tf.layers.dense(l2, 10, tf.nn.relu)
+NN = tf.layers.dense(l3, 1)
 
 #fonction a minimiser
 #loss = tf.losses.mean_squared_error(labels=target, predictions=NN)
@@ -83,6 +86,7 @@ for e in range(Nb_episodes):
           #print(t-h," Glambda_h ",Glambda_h)
           _, loss_value = sess.run((train, loss),feed_dict={state: np.reshape(s[0],(1,2)),target: Glambda_h})
           print(t-h,loss_value, V(s[0]))
+          #print("for ",s[0]," with target ",Glambda_h)
           
       
       t += 1
@@ -110,10 +114,12 @@ for e in range(Nb_episodes):
             Glambda += l**(j-1) * G[j+i]
         Glambda_h = (1-l)*Glambda + l**(h-1-i) * G[h]
         #print(t," ",Glambda_h)
-        _, loss_value = sess.run((train, loss),feed_dict={state: np.reshape(s[0],(1,2)),target: Glambda_h})
-        print(t-h,loss_value, V(s[0]))
+        _, loss_value = sess.run((train, loss),feed_dict={state: np.reshape(s[i],(1,2)),target: Glambda_h})
+        print(t-h,loss_value, V(s[i]))
+        #print("for ",s[0]," with target ",Glambda_h)
         t += 1
     Glambda_h = G[h]
     #print(t," ",Glambda_h)
-    _, loss_value = sess.run((train, loss),feed_dict={state: np.reshape(s[0],(1,2)),target: Glambda_h})
-    print(t-h,loss_value, V(s[0]))
+    _, loss_value = sess.run((train, loss),feed_dict={state: np.reshape(s[i],(1,2)),target: Glambda_h})
+    print(t-h,loss_value, V(s[h]))
+    #print("for ",s[0]," with target ",Glambda_h)
