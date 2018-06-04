@@ -15,7 +15,7 @@ G = (h+1)*[0]
 Learning_Rate = 1e-04
 learning_rate = Learning_Rate
 
-#policy a evaluer : on acelere dans le sens de la vitesse du vehicule
+#policy a evaluer : on accelere dans le sens de la vitesse du vehicule
 def policy(obs):
     if obs[1] < 0:
       a = 0
