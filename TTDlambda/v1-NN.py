@@ -3,14 +3,15 @@ import tensorflow as tf
 import numpy as np
 env = gym.make("MountainCar-v0")
 
-#Probleme sur la valeur du V(final-state)
 
-Nb_episodes = 10000
+Nb_episodes = 100000
 #horizon
 h = 10
+#discount factor
 gamma = 0.99
 #lambda utilise dans le calcul du lambda return
 l = 0.8
+
 G = (h+1)*[0]
 Learning_Rate = 1e-04
 learning_rate = Learning_Rate
