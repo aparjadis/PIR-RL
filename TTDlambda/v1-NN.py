@@ -12,7 +12,8 @@ gamma = 0.99
 #lambda utilise dans le calcul du lambda return
 l = 0.8
 G = (h+1)*[0]
-learning_rate = 1e-05
+Learning_Rate = 1e-04
+learning_rate = Learning_Rate
 
 #policy a evaluer : on acelere dans le sens de la vitesse du vehicule
 def policy(obs):
@@ -50,9 +51,11 @@ def V(s):
         return sess.run(NN,feed_dict={state: np.reshape(s,(1,2))})
 
 for e in range(Nb_episodes):
+    learning_rate = Learning_Rate/(e+1)
     observation = env.reset()
     done = False
     t = 0
+    err = 0
     #on garde en mémoire les états et les rewards sur h pas de temps, pour calculer 
     #les lambda returns
     r = (h+1)*[0]
@@ -85,13 +88,14 @@ for e in range(Nb_episodes):
           Glambda_h = (1-l)*Glambda + l**(h-1) * G[h]
           #print(t-h," Glambda_h ",Glambda_h)
           _, loss_value = sess.run((train, loss),feed_dict={state: np.reshape(s[0],(1,2)),target: Glambda_h})
-          print(t-h,loss_value, V(s[0]))
+          #print(t-h,loss_value, V(s[0]))
           #print("for ",s[0]," with target ",Glambda_h)
+          err += loss_value
           
       
       t += 1
       if done:
-          print("Episode finished after ",t," timesteps, for episode number ",e)
+          #print("Episode finished after ",t," timesteps, for episode number ",e)
           break
     
     #l'episode fini, on fait les h dernières updates 
@@ -115,11 +119,14 @@ for e in range(Nb_episodes):
         Glambda_h = (1-l)*Glambda + l**(h-1-i) * G[h]
         #print(t," ",Glambda_h)
         _, loss_value = sess.run((train, loss),feed_dict={state: np.reshape(s[i],(1,2)),target: Glambda_h})
-        print(t-h,loss_value, V(s[i]))
+        #print(t-h,loss_value, V(s[i]))
         #print("for ",s[0]," with target ",Glambda_h)
+        err += loss_value
         t += 1
     Glambda_h = G[h]
     #print(t," ",Glambda_h)
     _, loss_value = sess.run((train, loss),feed_dict={state: np.reshape(s[i],(1,2)),target: Glambda_h})
-    print(t-h,loss_value, V(s[h]))
+    #print(t-h,loss_value, V(s[h]))
     #print("for ",s[0]," with target ",Glambda_h)
+    err += loss_value
+    print("episode ",e," loss value ",err)
