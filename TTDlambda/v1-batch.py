@@ -2,7 +2,7 @@ import gym
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-import batch
+from batch import MemoryBuffer
 env = gym.make("MountainCar-v0")
 
 
@@ -15,9 +15,11 @@ gamma = 0.99
 #lambda utilise dans le calcul du lambda return
 l = 0.8
 
+tf.reset_default_graph()
+
 G = (h+1)*[0]
 replay_memory = MemoryBuffer(1000, (2,))
-Learning_Rate = 1e-04
+Learning_Rate = 1e-02
 learning_rate = Learning_Rate
 
 x = []
@@ -34,10 +36,11 @@ def policy(obs):
 def train_on_batch():
     err = 0
     mBatch = replay_memory.minibatch(mini_batch_size)
-    for i in range(mini_batch_size):
-        _, loss_value = sess.run((train, loss),feed_dict={state: np.reshape(mBatch[0][i],(1,2)),target: mBatch[1][i]})
-        err += loss_value
-    return err
+    _, loss_value = sess.run((train, loss),feed_dict={state: mBatch[0],target: mBatch[1]})
+#    for i in range(mini_batch_size):
+#        _, loss_value = sess.run((train, loss),feed_dict={state: np.reshape(mBatch[0][i],(1,2)),target: mBatch[1][i]})
+#        err += loss_value
+    return loss_value
     
 #input et target du NN
 state = tf.placeholder(shape = [None,2], dtype = tf.float32) 
@@ -67,7 +70,7 @@ def V(s):
         return sess.run(NN,feed_dict={state: np.reshape(s,(1,2))})
 
 for e in range(Nb_episodes):
-    learning_rate = Learning_Rate/(e+1)
+    #learning_rate = Learning_Rate/(e+1)
     observation = env.reset()
     done = False
     t = 0

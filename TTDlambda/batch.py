@@ -10,8 +10,8 @@ class MemoryBuffer:
         self.length = length
         self.state_shape = state_shape
         shape = (length,) + state_shape
-        self._s = np.zeros(shape, dtype=np.uint8) # starting states
-        self._t = np.zeros(length, dtype=np.uint8) # actions
+        self._s = np.zeros(shape, dtype=np.float32) # starting states
+        self._t = np.zeros(length, dtype=np.float32) # actions
         self.index = 0 # points one position past the last inserted element
         self.size = 0 # current size of the buffer
     
