@@ -1,7 +1,13 @@
 import gym
 import tensorflow as tf
 import numpy as np
+import matplotlib.pyplot as plt
 env = gym.make("MountainCar-v0")
+
+x = []
+y = []
+
+
 
 
 Nb_episodes = 100000
@@ -31,7 +37,7 @@ target = tf.placeholder(tf.float32)
 #le network
 l1 = tf.layers.dense(state, 10, tf.nn.relu)
 l2 = tf.layers.dense(l1, 500, tf.nn.relu)
-l3 = tf.layers.dense(l2, 10, tf.nn.relu)
+l3 = tf.layers.dense(l2, 100, tf.nn.sigmoid)
 NN = tf.layers.dense(l3, 1)
 
 #fonction a minimiser
@@ -131,3 +137,9 @@ for e in range(Nb_episodes):
     #print("for ",s[0]," with target ",Glambda_h)
     err += loss_value
     print("episode ",e," loss value ",err)
+    x.append(e)
+    if e==0:
+        ref = err
+    y.append(err/ref)
+    
+    plt.plot(x,y)
