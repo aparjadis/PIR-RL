@@ -2,6 +2,7 @@ import gym
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+import batch
 env = gym.make("MountainCar-v0")
 
 
@@ -15,6 +16,7 @@ gamma = 0.99
 l = 0.8
 
 G = (h+1)*[0]
+replay_memory = MemoryBuffer(1000, (2,))
 Learning_Rate = 1e-04
 learning_rate = Learning_Rate
 
@@ -29,6 +31,14 @@ def policy(obs):
       a = 2
     return a
 
+def train_on_batch():
+    err = 0
+    mBatch = replay_memory.minibatch(mini_batch_size)
+    for i in range(mini_batch_size):
+        _, loss_value = sess.run((train, loss),feed_dict={state: np.reshape(mBatch[0][i],(1,2)),target: mBatch[1][i]})
+        err += loss_value
+    return err
+    
 #input et target du NN
 state = tf.placeholder(shape = [None,2], dtype = tf.float32) 
 target = tf.placeholder(tf.float32)
@@ -61,7 +71,6 @@ for e in range(Nb_episodes):
     observation = env.reset()
     done = False
     t = 0
-    err = 0
     #on garde en mémoire les états et les rewards sur h pas de temps, pour calculer 
     #les lambda returns
     r = (h+1)*[0]
@@ -92,11 +101,7 @@ for e in range(Nb_episodes):
           for i in range(1,h):
               Glambda += l**(i-1) * G[i]
           Glambda_h = (1-l)*Glambda + l**(h-1) * G[h]
-          #print(t-h," Glambda_h ",Glambda_h)
-          _, loss_value = sess.run((train, loss),feed_dict={state: np.reshape(s[0],(1,2)),target: Glambda_h})
-          #print(t-h,loss_value, V(s[0]))
-          #print("for ",s[0]," with target ",Glambda_h)
-          err += loss_value
+          replay_memory.append(s[0],Glambda_h)
           
       
       t += 1
@@ -123,18 +128,14 @@ for e in range(Nb_episodes):
         for j in range(1,h-i):
             Glambda += l**(j-1) * G[j+i]
         Glambda_h = (1-l)*Glambda + l**(h-1-i) * G[h]
-        #print(t," ",Glambda_h)
-        _, loss_value = sess.run((train, loss),feed_dict={state: np.reshape(s[i],(1,2)),target: Glambda_h})
-        #print(t-h,loss_value, V(s[i]))
-        #print("for ",s[0]," with target ",Glambda_h)
-        err += loss_value
+        replay_memory.append(s[i],Glambda_h)
         t += 1
+        
     Glambda_h = G[h]
-    #print(t," ",Glambda_h)
-    _, loss_value = sess.run((train, loss),feed_dict={state: np.reshape(s[i],(1,2)),target: Glambda_h})
-    #print(t-h,loss_value, V(s[h]))
-    #print("for ",s[0]," with target ",Glambda_h)
-    err += loss_value
+    replay_memory.append(s[i+1],Glambda_h)
+    
+    err = train_on_batch()
+    
     print("episode ",e," loss value ",err)
     x.append(e)
     if e==0:
@@ -142,3 +143,4 @@ for e in range(Nb_episodes):
     y.append(err/ref)
     
     plt.plot(x,y)
+     
