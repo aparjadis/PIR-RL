@@ -31,7 +31,7 @@ def policy(obs):
     return a
 
 def e_init(i):
-    return tf.to_double(grad_W[i] > 1000)
+    return tf.to_double(grad_w[i] > 1000)
 
 #input et target du NN
 state = tf.placeholder(shape = [None,2], dtype = tf.float64) 
@@ -50,34 +50,39 @@ NN = tf.layers.dense(l3, 1)
 #loss = tf.losses.mean_squared_error(labels=target, predictions=NN)
 loss = tf.reduce_mean((NN - target)**2)
 
+#On recupere les poids et le gradient de la fonction loss par rapport aux poids
 W = tf.trainable_variables()
-grad_W = tf.gradients(xs=W, ys=loss)
+w = W[::2]
+b = W[1::2]
+grad_w = tf.gradients(xs=w, ys=loss)
+grad_b = tf.gradients(xs=b, ys=loss)
 
-e_old = [[] for i in range(len(grad_W))]
-for i in range(len(grad_W)):
-#    e_old.append(tf.to_double(grad_W[i] > 1000))
-    e_old[i] = tf.cond(init_el_traces,lambda : e_init(i),lambda: tf.identity(e_old[i]))
+#On initialise E_t-1, de même forme que W
+e_old = [tf.Variable([[0. for j in range(grad_w[i].shape[1])] for k in range(grad_w[i].shape[0])],dtype=tf.float64) for i in range(len(grad_w))]+[tf.Variable([0. for j in range(grad_b[i].shape[0])],dtype=tf.float64) for i in range(len(grad_b))]
+#for i in range(len(grad_W)):
+#    e_old[i] = tf.to_double(grad_W[i] > 1000)
+#    e_old[i] = tf.cond(init_el_traces,lambda : e_init(i),lambda: tf.identity(e_old[i]))
 
-e_grad = []
-for i in range(len(grad_W)):
-    e_grad.append(tf.add(grad_W[i],gamma*l*e_old[i]))
-    
-e_old = e_grad
+#On construit E_t à partir du gradient et de E_t-1
+e_grad_w = [tf.add(grad_w[i],e_old[i]) for i in range(len(grad_w))]
+e_grad_b = [tf.add(grad_b[i],e_old[i+len(grad_w)]) for i in range(len(grad_b))]
+#for i in range(len(grad_W)):
+#    e_grad.append(tf.add(grad_W[i],gamma*l*e_old[i]))
+
+#E_t-1 <-- E_t
+#for i in range(len(grad_W)):
+#    e_old[i] = e_grad[i] 
+eligibility_step = tf.assign(e_old[0], e_grad_w[0])
 
 optimizer = tf.train.GradientDescentOptimizer(learning_rate)
-update_weights = optimizer.apply_gradients(zip(e_grad,W))
+update_weights = optimizer.apply_gradients(zip(e_grad_w,w))
+update_weights = optimizer.apply_gradients(zip(e_grad_b,b))
 
 init = tf.global_variables_initializer()
 
 sess = tf.Session()
 sess.run(init)
 
-#on construit le vecteur de traces d'eligibilite
-size_W = 0
-for i in range(len(W)):
-    for j in range(len(W[i].shape)):
-        for k in range(int(W[i].shape[j])):
-            size_W += 1
     
 #value function
 def V(s):
@@ -118,17 +123,13 @@ for ep in range(Nb_episodes):
           
       
       fdict = {state: np.reshape(s,(1,2)), target: delta, init_el_traces: bool_e_init}
-      eligibility, _, loss_value = sess.run((e_old[0], update_weights, loss),feed_dict=fdict)
+      e1, _, loss_value = sess.run((eligibility_step, update_weights, loss),feed_dict=fdict)
       err += loss_value
       
-      if t > 2:
-          
-          plt.plot(eligibility[0])
-          plt.show() 
-      old = eligibility
-      
-      if t == 0:
-          bool_e_init = 0
+#      if t > 2:
+#          
+#          plt.plot(e1[0])
+#          plt.show()
        
       
 #      s1,s2 = sess.run((el,grad_W),feed_dict={state: np.reshape(s,(1,2)),target: delta, el: e})
