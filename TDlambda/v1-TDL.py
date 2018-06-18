@@ -1,13 +1,11 @@
 import gym
 import tensorflow as tf
 import numpy as np
-import np_fill
 import matplotlib.pyplot as plt
 env = gym.make("MountainCar-v0")
 
 
 Nb_episodes = 100000
-mini_batch_size = 32
 #horizon
 h = 10
 #discount factor
@@ -32,10 +30,15 @@ def policy(obs):
       a = 2
     return a
 
+def e_init(i):
+    return tf.to_double(grad_W[i] > 1000)
+
 #input et target du NN
 state = tf.placeholder(shape = [None,2], dtype = tf.float64) 
 target = tf.placeholder(tf.float64)
-el = tf.placeholder(tf.float32,[8,1])
+
+#booléen activant l'initialisation à zéro de e
+init_el_traces = tf.placeholder(tf.bool)
 
 #le network
 l1 = tf.layers.dense(state, 100, tf.nn.relu)
@@ -50,13 +53,16 @@ loss = tf.reduce_mean((NN - target)**2)
 W = tf.trainable_variables()
 grad_W = tf.gradients(xs=W, ys=loss)
 
-e_old = []
+e_old = [[] for i in range(len(grad_W))]
 for i in range(len(grad_W)):
-    e_old.append(tf.to_double(grad_W[i] > 1000))
+#    e_old.append(tf.to_double(grad_W[i] > 1000))
+    e_old[i] = tf.cond(init_el_traces,lambda : e_init(i),lambda: tf.identity(e_old[i]))
 
 e_grad = []
 for i in range(len(grad_W)):
     e_grad.append(tf.add(grad_W[i],gamma*l*e_old[i]))
+    
+e_old = e_grad
 
 optimizer = tf.train.GradientDescentOptimizer(learning_rate)
 update_weights = optimizer.apply_gradients(zip(e_grad,W))
@@ -83,6 +89,7 @@ for ep in range(Nb_episodes):
     done = False
     t = 0
     err = 0
+    bool_e_init = 1
     #on garde en mémoire les états et les rewards sur h pas de temps, pour calculer 
     #les lambda returns
     #e = np.zeros((1,size_W))
@@ -98,25 +105,37 @@ for ep in range(Nb_episodes):
     
       delta = reward + gamma*V(s_) - V(s) 
       
-      if t == 0:
-          e = sess.run(grad_W,feed_dict={state: np.reshape(s,(1,2)),target: delta})
-      else:
-          for i in e:
-              i *= gamma*l
-          grad = sess.run(grad_W,feed_dict={state: np.reshape(s,(1,2)),target: delta})
-          for i in range(len(e)):
-              e[i] = e[i] + grad[i]
+#      if t == 0:
+#          fdict = {state: np.reshape(s,(1,2)),target: delta,init_el_traces: e_init}
+#          e = sess.run(grad_W,feed_dict=fdict)
+#          e_init = 0
+#      else:
+#          for i in e:
+#              i *= gamma*l
+#          grad = sess.run(grad_W,feed_dict={state: np.reshape(s,(1,2)),target: delta})
+#          for i in range(len(e)):
+#              e[i] = e[i] + grad[i]
           
-      e_grad = delta*e
-      _, loss_value = sess.run((update_weights, loss),feed_dict={state: np.reshape(s,(1,2)),target: delta})
+      
+      fdict = {state: np.reshape(s,(1,2)), target: delta, init_el_traces: bool_e_init}
+      eligibility, _, loss_value = sess.run((e_old[0], update_weights, loss),feed_dict=fdict)
       err += loss_value
+      
+      if t > 2:
+          
+          plt.plot(eligibility[0])
+          plt.show() 
+      old = eligibility
+      
+      if t == 0:
+          bool_e_init = 0
        
       
 #      s1,s2 = sess.run((el,grad_W),feed_dict={state: np.reshape(s,(1,2)),target: delta, el: e})
 #      print(s1.shape)
 #      print(s2)
-      _, loss_value = sess.run((update_weights, loss),feed_dict={state: np.reshape(s,(1,2)),target: delta})
-      err += loss_value
+      #_, loss_value = sess.run((update_weights, loss),feed_dict={state: np.reshape(s,(1,2)),target: delta})
+      #err += loss_value
       
       t += 1
       if done:

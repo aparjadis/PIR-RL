@@ -9,7 +9,7 @@ env = gym.make("MountainCar-v0")
 Nb_episodes = 100000
 mini_batch_size = 32
 #horizon
-h = 10
+h = 1
 #discount factor
 gamma = 0.99
 #lambda utilise dans le calcul du lambda return
@@ -34,7 +34,7 @@ def policy(obs):
     return a
 
 def train_on_batch():
-    err = 0
+#    err = 0
     mBatch = replay_memory.minibatch(mini_batch_size)
     _, loss_value = sess.run((train, loss),feed_dict={state: mBatch[0],target: mBatch[1]})
 #    for i in range(mini_batch_size):
@@ -135,7 +135,7 @@ for e in range(Nb_episodes):
         t += 1
         
     Glambda_h = G[h]
-    replay_memory.append(s[i+1],Glambda_h)
+    replay_memory.append(s[i],Glambda_h)
     
     err = train_on_batch()
     

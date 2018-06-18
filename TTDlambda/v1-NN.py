@@ -5,8 +5,6 @@ import matplotlib.pyplot as plt
 env = gym.make("MountainCar-v0")
 
 
-Nb_episodes = 100000
-mini_batch_size = 32
 #horizon
 h = 10
 #discount factor
