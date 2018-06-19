@@ -58,25 +58,26 @@ grad_w = tf.gradients(xs=w, ys=loss)
 grad_b = tf.gradients(xs=b, ys=loss)
 
 #On initialise E_t-1, de même forme que W
-e_old = [tf.Variable([[0. for j in range(grad_w[i].shape[1])] for k in range(grad_w[i].shape[0])],dtype=tf.float64) for i in range(len(grad_w))]+[tf.Variable([0. for j in range(grad_b[i].shape[0])],dtype=tf.float64) for i in range(len(grad_b))]
+e_old_w = [tf.Variable([[0. for j in range(grad_w[i].shape[1])] for k in range(grad_w[i].shape[0])],dtype=tf.float64) for i in range(len(grad_w))]
+e_old_b = [tf.Variable([0. for j in range(grad_b[i].shape[0])],dtype=tf.float64) for i in range(len(grad_b))]
 #for i in range(len(grad_W)):
 #    e_old[i] = tf.to_double(grad_W[i] > 1000)
 #    e_old[i] = tf.cond(init_el_traces,lambda : e_init(i),lambda: tf.identity(e_old[i]))
 
 #On construit E_t à partir du gradient et de E_t-1
-e_grad_w = [tf.add(grad_w[i],e_old[i]) for i in range(len(grad_w))]
-e_grad_b = [tf.add(grad_b[i],e_old[i+len(grad_w)]) for i in range(len(grad_b))]
+e_grad_w = [tf.add(grad_w[i],gamma*l*e_old_w[i]) for i in range(len(grad_w))]
+e_grad_b = [tf.add(grad_b[i],gamma*l*e_old_b[i]) for i in range(len(grad_b))]
 #for i in range(len(grad_W)):
 #    e_grad.append(tf.add(grad_W[i],gamma*l*e_old[i]))
 
 #E_t-1 <-- E_t
 #for i in range(len(grad_W)):
 #    e_old[i] = e_grad[i] 
-eligibility_step = tf.assign(e_old[0], e_grad_w[0])
+eligibility_step = tf.assign(e_old_w[0], e_grad_w[0])
 
 optimizer = tf.train.GradientDescentOptimizer(learning_rate)
-update_weights = optimizer.apply_gradients(zip(e_grad_w,w))
-update_weights = optimizer.apply_gradients(zip(e_grad_b,b))
+update_weights_w = optimizer.apply_gradients(zip(e_grad_w,w))
+update_weights_b = optimizer.apply_gradients(zip(e_grad_b,b))
 
 init = tf.global_variables_initializer()
 
@@ -123,7 +124,7 @@ for ep in range(Nb_episodes):
           
       
       fdict = {state: np.reshape(s,(1,2)), target: delta, init_el_traces: bool_e_init}
-      e1, _, loss_value = sess.run((eligibility_step, update_weights, loss),feed_dict=fdict)
+      e1, _, _, loss_value = sess.run((eligibility_step, update_weights_w, update_weights_b, loss),feed_dict=fdict)
       err += loss_value
       
 #      if t > 2:
