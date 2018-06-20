@@ -6,14 +6,14 @@ from batch import MemoryBuffer
 env = gym.make("MountainCar-v0")
 
 
-Nb_episodes = 100000
-mini_batch_size = 32
+Nb_episodes = 50
+mini_batch_size = 100
 #discount factor
 gamma = 0.99
 
 tf.reset_default_graph()
 
-Learning_Rate = 1e-04
+Learning_Rate = 1e-02
 learning_rate = Learning_Rate
 replay_memory = MemoryBuffer(1000, (2,))
 

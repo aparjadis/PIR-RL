@@ -1,3 +1,5 @@
+from IPython import get_ipython
+get_ipython().magic('reset -sf')
 import gym
 import tensorflow as tf
 import numpy as np
@@ -6,10 +8,10 @@ from batch import MemoryBuffer
 env = gym.make("MountainCar-v0")
 
 
-Nb_episodes = 100000
-mini_batch_size = 32
+Nb_episodes = 100
+mini_batch_size = 100
 #horizon
-h = 1
+h = 10
 #discount factor
 gamma = 0.99
 #lambda utilise dans le calcul du lambda return
@@ -70,7 +72,7 @@ def V(s):
         return sess.run(NN,feed_dict={state: np.reshape(s,(1,2))})
 
 for e in range(Nb_episodes):
-    #learning_rate = Learning_Rate/(e+1)
+#    learning_rate = Learning_Rate/(e+1)
     observation = env.reset()
     done = False
     t = 0
@@ -106,6 +108,10 @@ for e in range(Nb_episodes):
           Glambda_h = (1-l)*Glambda + l**(h-1) * G[h]
           replay_memory.append(s[0],Glambda_h)
           
+          if e == 1 or e == 4 :
+              print(t,Glambda_h)
+          
+
       
       t += 1
       if done:
@@ -119,23 +125,28 @@ for e in range(Nb_episodes):
     r[h] = reward
     s[h] = observation
     
-    for i in range(1,h-1):
+    for i in range(1,h):
         
         for n in range(i,h+1):
               G[n] = 0
               for j in range(i,n+1):
                   G[n] += gamma**(j-1 - i+1) * r[j]
-              G[n] += gamma**n * V(s[n])
+              if n < h:
+                  G[n] += gamma**n * V(s[n])
         
         Glambda = 0
         for j in range(1,h-i):
             Glambda += l**(j-1) * G[j+i]
         Glambda_h = (1-l)*Glambda + l**(h-1-i) * G[h]
         replay_memory.append(s[i],Glambda_h)
+        if e == 1 or e == 4:
+              print(t,Glambda_h)
         t += 1
         
-    Glambda_h = G[h]
-    replay_memory.append(s[i],Glambda_h)
+    Glambda_h = r[h]
+    replay_memory.append(s[h],Glambda_h)
+    if e == 1 or e == 4:
+              print(t,Glambda_h)
     
     err = train_on_batch()
     
@@ -145,5 +156,10 @@ for e in range(Nb_episodes):
         ref = err
     y.append(err/ref)
     
-    plt.plot(x,y)
-     
+plt.plot(x,y)
+plt.show()
+
+x = np.linspace(-1.2, 0.5, num=100)
+y = [V([i,0])[0][0] for i in x]
+plt.plot(x,y)
+plt.show()

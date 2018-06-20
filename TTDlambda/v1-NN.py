@@ -1,10 +1,12 @@
+from IPython import get_ipython
+get_ipython().magic('reset -sf')
 import gym
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 env = gym.make("MountainCar-v0")
 
-
+Nb_episodes = 5000
 #horizon
 h = 10
 #discount factor
@@ -13,7 +15,7 @@ gamma = 0.99
 l = 0.8
 
 G = (h+1)*[0]
-Learning_Rate = 1e-04
+Learning_Rate = 1e-03
 learning_rate = Learning_Rate
 
 x = []
@@ -109,13 +111,14 @@ for e in range(Nb_episodes):
     r[h] = reward
     s[h] = observation
     
-    for i in range(1,h-1):
+    for i in range(1,h):
         
         for n in range(i,h+1):
               G[n] = 0
               for j in range(i,n+1):
                   G[n] += gamma**(j-1 - i+1) * r[j]
-              G[n] += gamma**n * V(s[n])
+              if n < h:
+                  G[n] += gamma**n * V(s[n])
         
         Glambda = 0
         for j in range(1,h-i):
@@ -139,4 +142,13 @@ for e in range(Nb_episodes):
         ref = err
     y.append(err/ref)
     
+plt.plot(x,y)
+plt.show()
+    
+    
+
+for a in np.linspace(-0.05, 0.05, num=5):
+    x = np.linspace(-1.2, 0.5, num=100)
+    y = [V([i,a])[0][0] for i in x]
     plt.plot(x,y)
+    plt.show()

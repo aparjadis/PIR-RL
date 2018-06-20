@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 env = gym.make("MountainCar-v0")
 
 
-Nb_episodes = 100000
+Nb_episodes = 50
 #discount factor
 gamma = 0.99
 
