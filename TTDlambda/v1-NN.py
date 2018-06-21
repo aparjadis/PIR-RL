@@ -1,14 +1,14 @@
-from IPython import get_ipython
-get_ipython().magic('reset -sf')
+#from IPython import get_ipython
+#get_ipython().magic('reset -sf')
 import gym
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 env = gym.make("MountainCar-v0")
 
-Nb_episodes = 5000
+Nb_episodes = 1000
 #horizon
-h = 10
+h = 20
 #discount factor
 gamma = 0.99
 #lambda utilise dans le calcul du lambda return
@@ -19,7 +19,7 @@ Learning_Rate = 1e-03
 learning_rate = Learning_Rate
 
 x = []
-y = []
+y_lambda = []
 
 #policy a evaluer : on accelere dans le sens de la vitesse du vehicule
 def policy(obs):
@@ -34,9 +34,9 @@ state = tf.placeholder(shape = [None,2], dtype = tf.float32)
 target = tf.placeholder(tf.float32)
 
 #le network
-l1 = tf.layers.dense(state, 10, tf.nn.relu)
-l2 = tf.layers.dense(l1, 500, tf.nn.relu)
-l3 = tf.layers.dense(l2, 100, tf.nn.sigmoid)
+l1 = tf.layers.dense(state, 100, tf.nn.relu)
+l2 = tf.layers.dense(l1, 50, tf.nn.relu)
+l3 = tf.layers.dense(l2, 10, tf.nn.relu)
 NN = tf.layers.dense(l3, 1)
 
 #fonction a minimiser
@@ -57,7 +57,7 @@ def V(s):
         return sess.run(NN,feed_dict={state: np.reshape(s,(1,2))})
 
 for e in range(Nb_episodes):
-    learning_rate = Learning_Rate/(e+1)
+#    learning_rate = Learning_Rate/(e+1)
     observation = env.reset()
     done = False
     t = 0
@@ -140,15 +140,18 @@ for e in range(Nb_episodes):
     x.append(e)
     if e==0:
         ref = err
-    y.append(err/ref)
+    if e > 2:
+        y_lambda.append((y_lambda[-1]+y_lambda[-2]+err)/ref)
+    else:
+        y_lambda.append(err/ref)
     
-plt.plot(x,y)
+plt.plot(x,y_lambda)
 plt.show()
     
     
 
 for a in np.linspace(-0.05, 0.05, num=5):
-    x = np.linspace(-1.2, 0.5, num=100)
-    y = [V([i,a])[0][0] for i in x]
-    plt.plot(x,y)
+    x_ = np.linspace(-1.2, 0.5, num=100)
+    y_ = [V([i,a])[0][0] for i in x_]
+    plt.plot(x_,y_)
     plt.show()

@@ -3,13 +3,16 @@ get_ipython().magic('reset -sf')
 import gym
 import tensorflow as tf
 import numpy as np
+import random as rd
+np.set_printoptions(threshold=np.nan)
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 from batch import MemoryBuffer
 env = gym.make("MountainCar-v0")
 
 
-Nb_episodes = 20
-mini_batch_size = 100
+Nb_episodes = 500
+mini_batch_size = 500
 #horizon
 h = 10
 #discount factor
@@ -21,11 +24,11 @@ tf.reset_default_graph()
 
 G = (h+1)*[0]
 replay_memory = MemoryBuffer(1000, (2,))
-Learning_Rate = 1e-02
+Learning_Rate = 1e-01
 learning_rate = Learning_Rate
 
 x = []
-y_bl = []
+y_b0 = []
 
 #policy a evaluer : on accelere dans le sens de la vitesse du vehicule
 def policy(obs):
@@ -51,7 +54,7 @@ target = tf.placeholder(tf.float32)
 #le network
 l1 = tf.layers.dense(state, 100, tf.nn.relu)
 l2 = tf.layers.dense(l1, 50, tf.nn.relu)
-l3 = tf.layers.dense(l2, 10, tf.nn.sigmoid)
+l3 = tf.layers.dense(l2, 10, tf.nn.relu)
 NN = tf.layers.dense(l3, 1)
 
 #fonction a minimiser
@@ -72,8 +75,8 @@ def V(s):
         return sess.run(NN,feed_dict={state: np.reshape(s,(1,2))})
 
 for e in range(Nb_episodes):
-#    learning_rate = Learning_Rate/(e+1)
-    observation = env.reset()
+    learning_rate = Learning_Rate/(e+1)
+    s_ = env.reset()
     done = False
     t = 0
     #on garde en mémoire les états et les rewards sur h pas de temps, pour calculer 
@@ -84,80 +87,44 @@ for e in range(Nb_episodes):
     while not done:
         
       #env.render()
-      action = policy(observation)
-      observation, reward, done, info = env.step(action)
+      s = s_
+      action = policy(s)
+      s_, reward, done, info = env.step(action)
       
-      for i in range(h):
-          r[i] = r[i+1]
-          s[i] = s[i+1]
-    
-      r[h] = reward
-      s[h] = observation
-    
-      if t >= h :
-          #calcul des discounted reward a horizon h
-          for i in range(1,h+1):
-              G[i] = 0
-              for j in range(1,i+1):
-                  G[i] += gamma**(j-1) * r[j]
-              G[i] += gamma**i * V(s[i])
-          #calcul du truncated lambda return
-          Glambda = 0
-          for i in range(1,h):
-              Glambda += l**(i-1) * G[i]
-          Glambda_h = (1-l)*Glambda + l**(h-1) * G[h]
-          replay_memory.append(s[0],Glambda_h)
-          
-          if e == 1 or e == 4 or e == 90:
-              print(t,Glambda_h)
-          
-
+      if not done:
+          td = reward + gamma*V(s_)
+          replay_memory.append(s, td)
+      else:
+          td = reward 
+          for i in range(10):
+              replay_memory.append(s, td)
+           
+      
+      if e == 10 or e == 15 or e == 90:
+          print(t,td)
       
       t += 1
-      if done:
+      if done:  
           #print("Episode finished after ",t," timesteps, for episode number ",e)
           break
-    
-    #l'episode fini, on fait les h dernières updates 
-          r[i] = r[i+1]
-          s[i] = s[i+1]
-    
-    r[h] = reward
-    s[h] = observation
-    
-    for i in range(1,h):
+      
         
-        for n in range(i,h+1):
-              G[n] = 0
-              for j in range(i,n+1):
-                  G[n] += gamma**(j-1 - i+1) * r[j]
-              if n < h:
-                  G[n] += gamma**n * V(s[n])
+    replay_memory.append(s,reward)
+    
+    if e > 5:
+        err = 0
+        for i in range(1):
+            err += train_on_batch()
         
-        Glambda = 0
-        for j in range(1,h-i):
-            Glambda += l**(j-1) * G[j+i]
-        Glambda_h = (1-l)*Glambda + l**(h-1-i) * G[h]
-        replay_memory.append(s[i],Glambda_h)
-        if e == 1 or e == 4 or e == 90:
-              print(t,Glambda_h)
-        t += 1
-        
-    Glambda_h = r[h]
-    replay_memory.append(s[h],Glambda_h)
-    if e == 1 or e == 4 or e == 90:
-              print(t,Glambda_h)
+        print("episode ",e," loss value ",err)
+        x.append(e)
+        if e==6:
+            ref = err
+        y_b0.append(err/ref)
     
-    err = train_on_batch()
-    
-    print("episode ",e," loss value ",err)
-    x.append(e)
-    if e==0:
-        ref = err
-    y_bl.append(err/ref)
-    
-plt.plot(x,y_bl)
+plt.plot(x,y_b0)
 plt.show()
+
 
 for a in np.linspace(-0.05, 0.05, num=5):
     x_ = np.linspace(-1.2, 0.5, num=100)
