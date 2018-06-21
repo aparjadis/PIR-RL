@@ -1,5 +1,5 @@
-from IPython import get_ipython
-get_ipython().magic('reset -sf')
+#from IPython import get_ipython
+#get_ipython().magic('reset -sf')
 import gym
 import tensorflow as tf
 import numpy as np
@@ -11,8 +11,8 @@ from batch import MemoryBuffer
 env = gym.make("MountainCar-v0")
 
 
-Nb_episodes = 500
-mini_batch_size = 500
+Nb_episodes = 400
+mini_batch_size = 32
 #horizon
 h = 10
 #discount factor
@@ -24,7 +24,7 @@ tf.reset_default_graph()
 
 G = (h+1)*[0]
 replay_memory = MemoryBuffer(1000, (2,))
-Learning_Rate = 1e-01
+Learning_Rate = 1e-03
 learning_rate = Learning_Rate
 
 x = []
@@ -41,7 +41,8 @@ def policy(obs):
 def train_on_batch():
 #    err = 0
     mBatch = replay_memory.minibatch(mini_batch_size)
-    _, loss_value = sess.run((train, loss),feed_dict={state: mBatch[0],target: mBatch[1]})
+    targ = np.reshape(mBatch[1],(mini_batch_size,1))
+    _, loss_value = sess.run((train, loss),feed_dict={state: mBatch[0],target: targ})
 #    for i in range(mini_batch_size):
 #        _, loss_value = sess.run((train, loss),feed_dict={state: np.reshape(mBatch[0][i],(1,2)),target: mBatch[1][i]})
 #        err += loss_value
@@ -49,7 +50,7 @@ def train_on_batch():
     
 #input et target du NN
 state = tf.placeholder(shape = [None,2], dtype = tf.float32) 
-target = tf.placeholder(tf.float32)
+target = tf.placeholder(shape = [None,1],dtype = tf.float32)
 
 #le network
 l1 = tf.layers.dense(state, 100, tf.nn.relu)
@@ -59,7 +60,7 @@ NN = tf.layers.dense(l3, 1)
 
 #fonction a minimiser
 #loss = tf.losses.mean_squared_error(labels=target, predictions=NN)
-loss = tf.reduce_mean((NN - target)**2)
+loss = tf.reduce_mean(tf.square(NN - target))
 
 
 optimizer = tf.train.AdamOptimizer(learning_rate)
@@ -93,15 +94,11 @@ for e in range(Nb_episodes):
       
       if not done:
           td = reward + gamma*V(s_)
-          replay_memory.append(s, td)
       else:
           td = reward 
-          for i in range(10):
-              replay_memory.append(s, td)
+    
+      replay_memory.append(s, td)
            
-      
-      if e == 10 or e == 15 or e == 90:
-          print(t,td)
       
       t += 1
       if done:  
@@ -111,14 +108,14 @@ for e in range(Nb_episodes):
         
     replay_memory.append(s,reward)
     
-    if e > 5:
+    if e > 1:
         err = 0
-        for i in range(1):
+        for i in range(100):
             err += train_on_batch()
         
         print("episode ",e," loss value ",err)
         x.append(e)
-        if e==6:
+        if e==2:
             ref = err
         y_b0.append(err/ref)
     

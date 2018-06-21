@@ -1,5 +1,5 @@
-from IPython import get_ipython
-get_ipython().magic('reset -sf')
+#from IPython import get_ipython
+#get_ipython().magic('reset -sf')
 import gym
 import tensorflow as tf
 import numpy as np
@@ -8,7 +8,7 @@ from batch import MemoryBuffer
 env = gym.make("MountainCar-v0")
 
 
-Nb_episodes = 20
+Nb_episodes = 400
 mini_batch_size = 100
 #horizon
 h = 10
@@ -38,7 +38,8 @@ def policy(obs):
 def train_on_batch():
 #    err = 0
     mBatch = replay_memory.minibatch(mini_batch_size)
-    _, loss_value = sess.run((train, loss),feed_dict={state: mBatch[0],target: mBatch[1]})
+    targ = np.reshape(mBatch[1],(mini_batch_size,1))
+    _, loss_value = sess.run((train, loss),feed_dict={state: mBatch[0],target: targ})
 #    for i in range(mini_batch_size):
 #        _, loss_value = sess.run((train, loss),feed_dict={state: np.reshape(mBatch[0][i],(1,2)),target: mBatch[1][i]})
 #        err += loss_value
@@ -46,12 +47,12 @@ def train_on_batch():
     
 #input et target du NN
 state = tf.placeholder(shape = [None,2], dtype = tf.float32) 
-target = tf.placeholder(tf.float32)
+target = tf.placeholder(shape = [None,1],dtype = tf.float32)
 
 #le network
 l1 = tf.layers.dense(state, 100, tf.nn.relu)
 l2 = tf.layers.dense(l1, 50, tf.nn.relu)
-l3 = tf.layers.dense(l2, 10, tf.nn.sigmoid)
+l3 = tf.layers.dense(l2, 10, tf.nn.relu)
 NN = tf.layers.dense(l3, 1)
 
 #fonction a minimiser
@@ -148,13 +149,16 @@ for e in range(Nb_episodes):
     if e == 1 or e == 4 or e == 90:
               print(t,Glambda_h)
     
-    err = train_on_batch()
-    
-    print("episode ",e," loss value ",err)
-    x.append(e)
-    if e==0:
-        ref = err
-    y_bl.append(err/ref)
+    if e>2:
+        err = train_on_batch()
+        err += train_on_batch()
+        err += train_on_batch()
+        
+        print("episode ",e," loss value ",err)
+        x.append(e)
+        if e==3:
+            ref = err
+        y_bl.append(err/ref)
     
 plt.plot(x,y_bl)
 plt.show()
